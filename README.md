@@ -35,33 +35,33 @@ and responds with a spoken diagnosis — like a real doctor consultation.
 ## ⚙️ Setup & Installation
 
 ### 1. Clone the repository
-\```
+```
 git clone https://github.com/ShubhamKosaiker/AI-Medical-Assistant-Chatbot.git
 cd AI-Medical-Assistant-Chatbot
-\```
+```
 
 ### 2. Install dependencies
-\```
+```
 pip install -r requirements.txt
-\```
+```
 
 ### 3. Add your API keys
 Create a `.env` file in the root folder:
-\```
+```
 GROQ_API_KEY=your_groq_api_key
 ELEVENLABS_API_KEY=your_elevenlabs_api_key
-\```
+```
 
 ### 4. Run the app
-\```
+```
 python app.py
-\```
+```
 
 ---
 
 ## 📁 Project Structure
 
-\```
+```
 AI_Doctor_Assistant/
 ├── app.py                  # Main UI application
 ├── brain_of_the_doctor.py  # LLM + vision logic
@@ -70,7 +70,7 @@ AI_Doctor_Assistant/
 ├── .env                    # API keys (not uploaded)
 ├── .gitignore
 └── README.md
-\```
+```
 
 ---
 
