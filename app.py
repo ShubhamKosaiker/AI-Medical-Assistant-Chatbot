@@ -30,8 +30,11 @@ def process_inputs(audio_filepath,image_filepath):
     else:
         doctor_response= "No image provided for me to analyze"
 
-    voice_of_doctor= text_to_speech_with_elevenlabs(input_text=doctor_response,output_filepath="final.mp3")
-
+    #voice_of_doctor= text_to_speech_with_elevenlabs(input_text=doctor_response,output_filepath="final.mp3")
+    # need to chnage this for deployment on HF
+    import tempfile
+    tmp = tempfile.mktemp(suffix=".mp3")
+    voice_of_doctor= text_to_speech_with_gtts(input_text=doctor_response,output_filepath=tmp)
     return speech_to_text_output,doctor_response,voice_of_doctor
 
 
@@ -211,12 +214,12 @@ label span, .gr-block label, .block label span {
 }
 """
 
-with gr.Blocks(css=custom_css, title="AI Doctor") as iface:
+with gr.Blocks(css=custom_css, title="AI Doctor Assistant") as iface:
 
     gr.HTML("""
         <div class="app-header">
-            <h1>🩺 AI Doctor</h1>
-            <p class="subtitle">Describe your symptoms · Upload an image · Get an instant consultation</p>
+            <h1>🩺 AI Doctor Assistant</h1>
+            <p class="subtitle">Voice powered · AI diagnostics · Instant medical insights</p>
             <div class="status-badge">
                 <span class="dot"></span>
                 Groq &nbsp;·&nbsp; ElevenLabs &nbsp;·&nbsp; LLaMA 4 Scout
@@ -273,4 +276,4 @@ with gr.Blocks(css=custom_css, title="AI Doctor") as iface:
         </div>
     """)
 
-iface.launch(debug=True)
+iface.launch()

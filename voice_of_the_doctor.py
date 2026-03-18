@@ -30,11 +30,11 @@ from elevenlabs.client import ElevenLabs
 
 load_dotenv()
 
-client = ElevenLabs(api_key=os.getenv("ELEVENLABS_API_KEYS"))
+client = ElevenLabs(api_key=os.getenv("ELEVENLABS_API_KEY"))
 
-ELEVENLAB_API_KEYS=os.environ.get("ELEVENLAB_API_KEYS")
+ELEVENLAB_API_KEY=os.environ.get("ELEVENLAB_API_KEY")
 def text_to_speech_with_elevenlabs_old(input_text, output_filepath):
-    client = ElevenLabs(api_key=os.environ.get("ELEVENLABS_API_KEYS"))
+    client = ElevenLabs(api_key=os.environ.get("ELEVENLABS_API_KEY"))
     
     audio = client.text_to_speech.convert(
         text=input_text,
@@ -69,7 +69,8 @@ def text_to_speech_with_gtts(input_text,output_filepath):
         if os_name=="Darwin": #MacOS
             subprocess.run(['afplay',output_filepath])
         elif os_name=="Windows": #Windows
-            os.startfile(os.path.abspath(output_filepath)) 
+            pass # will be handled by gradio on (huggingface for deployment)
+            #os.startfile(os.path.abspath(output_filepath)) 
             #abs_path = os.path.abspath(output_filepath) 
             #subprocess.run(['powershell','-c',f'(New-Object Media.SoundPlayer "{output_filepath}").PlaySync();'])
             #subprocess.run(['powershell','-c',f'Start-Process "{output_filepath}" -Wait'])
@@ -88,7 +89,7 @@ input_text= "Hi this is AI with Shubham, Autoplay testing"
 
 
 def text_to_speech_with_elevenlabs(input_text, output_filepath):
-    client = ElevenLabs(api_key=os.environ.get("ELEVENLABS_API_KEYS"))
+    client = ElevenLabs(api_key=os.environ.get("ELEVENLABS_API_KEY"))
     
     audio = client.text_to_speech.convert(
         text=input_text,
@@ -103,7 +104,9 @@ def text_to_speech_with_elevenlabs(input_text, output_filepath):
         if os_name=="Darwin": #MacOS
             subprocess.run(['afplay',output_filepath])
         elif os_name=="Windows": #Windows
-            os.startfile(os.path.abspath(output_filepath)) 
+            pass # will be handled by gradio on (huggingface for deployment)
+            #os.startfile(os.path.abspath(output_filepath)) 
+            
             #abs_path = os.path.abspath(output_filepath) 
             #subprocess.run(['powershell','-c',f'(New-Object Media.SoundPlayer "{output_filepath}").PlaySync();'])
             #subprocess.run(['powershell','-c',f'Start-Process "{output_filepath}" -Wait'])
