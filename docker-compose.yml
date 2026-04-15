@@ -1,0 +1,25 @@
+# docker-compose.yml — Local development and production container setup
+#
+# Usage:
+#   docker compose up --build     # first run (builds the image)
+#   docker compose up             # subsequent runs (uses cached image)
+#   docker compose down           # stop and remove containers
+#
+# API keys are read from a .env file in the project root — never commit .env.
+# Copy "- Copy.env" to ".env" and fill in your actual keys before running.
+
+services:
+  app:
+    build: .
+    ports:
+      - "7860:7860"     # host:container — open http://localhost:7860 in your browser
+    env_file:
+      - .env            # Injects GROQ_API_KEY, ELEVENLABS_API_KEY into the container
+    restart: unless-stopped
+    healthcheck:
+      # Verify the Gradio server is responding before marking the container healthy.
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:7860')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s   # Give Gradio time to start before the first check

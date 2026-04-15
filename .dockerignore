@@ -1,0 +1,31 @@
+# .dockerignore — files excluded from the Docker build context
+# Keeping the context small speeds up builds and prevents secrets from
+# leaking into the image layer history.
+
+.env
+- Copy.env
+.git
+.gitignore
+.github
+__pycache__
+*.pyc
+*.pyo
+
+# Test files — not needed in the production image
+tests/
+
+# Generated audio files — not needed in the image
+*.mp3
+*.wav
+
+# Package manager lock files — pip reads requirements.txt directly
+Pipfile
+Pipfile.lock
+
+# Documentation and media
+README.md
+*.jpeg
+*.jpg
+*.png
+*.mp4
+*.txt

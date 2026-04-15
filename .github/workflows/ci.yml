@@ -1,0 +1,53 @@
+# .github/workflows/ci.yml — Continuous Integration pipeline
+#
+# Automatically runs the full test suite on every push and pull request
+# to the main branch. A green checkmark badge on your GitHub repo shows
+# interviewers that the code is tested and verified.
+#
+# What this pipeline does:
+#   1. Checks out the code
+#   2. Sets up Python 3.11
+#   3. Installs system dependencies (FFmpeg, PortAudio)
+#   4. Installs Python dependencies
+#   5. Runs all pytest tests with verbose output
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Run test suite (Python 3.11 / Ubuntu)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"   # Cache pip downloads to speed up subsequent runs
+
+      - name: Install system dependencies
+        # FFmpeg: needed by pydub for audio encoding
+        # portaudio19-dev: needed to build PyAudio's C extension
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ffmpeg portaudio19-dev
+
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run tests
+        # Inject dummy API keys so _validate_env() in app.py passes at import time.
+        # These are not real keys — no actual API calls are made (all mocked).
+        env:
+          GROQ_API_KEY: test-key-ci-placeholder
+          ELEVENLABS_API_KEY: test-key-ci-placeholder
+        run: pytest tests/ -v --tb=short

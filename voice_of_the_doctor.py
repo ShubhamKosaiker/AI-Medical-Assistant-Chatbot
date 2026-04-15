@@ -1,120 +1,124 @@
-#step 1a :Setup Text to Speech TTS model with  google TTS
-import os 
+"""
+voice_of_the_doctor.py — Text-to-Speech Synthesis
+---------------------------------------------------
+Handles the "voice" of the AI doctor — converts the LLM's text response
+into a spoken MP3 file that plays in the Gradio audio component.
+
+Two TTS engines are available:
+  • gTTS  (Google Text-to-Speech) — free, no API key required, used by default.
+  • ElevenLabs — premium, highly natural voice, requires ELEVENLABS_API_KEY.
+
+To switch to ElevenLabs, replace text_to_speech_with_gtts with
+text_to_speech_with_elevenlabs in app.py's process_inputs function.
+
+Audio playback (afplay / aplay) is only triggered in local development.
+When deployed on HuggingFace Spaces or Docker, Gradio's audio component
+streams the file to the browser — no server-side playback is needed.
+
+External dependencies: gtts, elevenlabs (pip install as above)
+"""
+
+import logging
+import os
+import platform
+import subprocess
+
 from gtts import gTTS
 
-def text_to_speech_with_gtts_old(input_text,output_filepath):
-    language="en"
+from config import ELEVENLABS_OUTPUT_FORMAT, ELEVENLABS_VOICE_ID, TTS_ELEVENLABS_MODEL
 
-    audioobj=gTTS(
-        text=input_text,
-        lang=language,
-        slow=False
-    )
+logger = logging.getLogger(__name__)
+
+
+# ── Local Playback Helper ─────────────────────────────────────────────────────
+
+def _play_audio(output_filepath: str) -> None:
+    """Play an audio file using the platform's native audio tool.
+
+    This is a developer convenience — it lets you hear the TTS output when
+    running the app locally via CLI. Errors here are non-fatal; the file
+    has already been saved and will be served by Gradio regardless.
+
+    Platform mapping:
+      • macOS   → afplay  (built-in, no install needed)
+      • Linux   → aplay   (ALSA; alternative: mpg123 or ffplay)
+      • Windows → skipped (Gradio's browser player handles playback)
+    """
+    os_name = platform.system()
+    try:
+        if os_name == "Darwin":   # macOS
+            subprocess.run(["afplay", output_filepath], check=True)
+        elif os_name == "Linux":
+            subprocess.run(["aplay", output_filepath], check=True)
+        # Windows: audio is delivered via Gradio's UI — no local autoplay needed.
+    except Exception as e:
+        logger.error("Local audio playback failed: %s", e)
+
+
+# ── Google Text-to-Speech (Free) ──────────────────────────────────────────────
+
+def text_to_speech_with_gtts(input_text: str, output_filepath: str) -> str:
+    """Convert text to speech using Google TTS and save the result as an MP3.
+
+    gTTS is the default engine. It's free, requires no API key, and produces
+    clear (if slightly robotic) speech. It works out of the box on HuggingFace
+    Spaces and Docker without any extra credentials.
+
+    Args:
+        input_text:      The doctor's diagnosis text to be spoken.
+        output_filepath: Path where the MP3 file will be written.
+
+    Returns:
+        output_filepath — passed back so Gradio can serve the file directly.
+    """
+    logger.info("Generating speech with gTTS (%d characters).", len(input_text))
+
+    # gTTS streams audio from Google's servers and writes it to disk.
+    audioobj = gTTS(text=input_text, lang="en", slow=False)
     audioobj.save(output_filepath)
-    return output_filepath 
 
-input_text= "Hi this is AI with Shubham"
-#text_to_speech_with_gtts_old(input_text=input_text,output_filepath="gtts_testing.mp3")
+    # Attempt local playback (no-op on Windows / HuggingFace).
+    _play_audio(output_filepath)
 
-
-
-#step 1b:Setup Text to Speech TTS model with ElevenLAbs
-
-import elevenlabs
-from elevenlabs.client import ElevenLabs
-from elevenlabs import save
+    return output_filepath
 
 
-from dotenv import load_dotenv
-from elevenlabs.client import ElevenLabs
+# ── ElevenLabs Text-to-Speech (Premium) ──────────────────────────────────────
 
-load_dotenv()
+def text_to_speech_with_elevenlabs(input_text: str, output_filepath: str) -> str:
+    """Convert text to speech using ElevenLabs and save the result as an MP3.
 
-client = ElevenLabs(api_key=os.getenv("ELEVENLABS_API_KEY"))
+    ElevenLabs produces significantly more natural, human-like speech than gTTS.
+    Requires a paid ElevenLabs account and the ELEVENLABS_API_KEY environment
+    variable to be set. Voice characteristics are controlled by ELEVENLABS_VOICE_ID
+    in config.py.
 
-ELEVENLAB_API_KEY=os.environ.get("ELEVENLAB_API_KEY")
-def text_to_speech_with_elevenlabs_old(input_text, output_filepath):
+    Args:
+        input_text:      The doctor's diagnosis text to be spoken.
+        output_filepath: Path where the MP3 file will be written.
+
+    Returns:
+        output_filepath — passed back so Gradio can serve the file directly.
+    """
+    # Lazy import: only loads the ElevenLabs SDK when this function is actually called,
+    # so the app doesn't fail at startup if elevenlabs isn't installed.
+    from elevenlabs import save
+    from elevenlabs.client import ElevenLabs
+
+    logger.info("Generating speech with ElevenLabs (%d characters).", len(input_text))
+
     client = ElevenLabs(api_key=os.environ.get("ELEVENLABS_API_KEY"))
-    
+
+    # convert() returns a generator of audio bytes; save() streams it to disk.
     audio = client.text_to_speech.convert(
         text=input_text,
-        voice_id="JjpPU2Do2isL2c5DkxV2",  # replace with your voice ID if different
-        model_id="eleven_turbo_v2",
-        output_format="mp3_44100_128",
+        voice_id=ELEVENLABS_VOICE_ID,           # Which voice clone to use.
+        model_id=TTS_ELEVENLABS_MODEL,          # eleven_turbo_v2 = fast + high quality.
+        output_format=ELEVENLABS_OUTPUT_FORMAT, # mp3_44100_128 = CD quality MP3.
     )
-    
     save(audio, output_filepath)
-    return output_filepath 
 
-#text_to_speech_with_elevenlabs_old(input_text,output_filepath="elevenlabs_testing.mp3")
+    # Attempt local playback (no-op on Windows / HuggingFace).
+    _play_audio(output_filepath)
 
-
-
-#step 2: Use model for text output to voice
-
-import subprocess
-import platform
-
-def text_to_speech_with_gtts(input_text,output_filepath):
-    language="en"
-
-    audioobj=gTTS(
-        text=input_text,
-        lang=language,
-        slow=False
-    )
-    audioobj.save(output_filepath)
-    os_name=platform.system()
-    try:
-        if os_name=="Darwin": #MacOS
-            subprocess.run(['afplay',output_filepath])
-        elif os_name=="Windows": #Windows
-            pass # will be handled by gradio on (huggingface for deployment)
-            #os.startfile(os.path.abspath(output_filepath)) 
-            #abs_path = os.path.abspath(output_filepath) 
-            #subprocess.run(['powershell','-c',f'(New-Object Media.SoundPlayer "{output_filepath}").PlaySync();'])
-            #subprocess.run(['powershell','-c',f'Start-Process "{output_filepath}" -Wait'])
-        elif os_name=="Linux": #Linux
-            subprocess.run(['aplay',output_filepath]) #Alternative use 'mpg123' or 'ffplay'
-        else:
-            raise OSError("Unsupported Operating System")
-    except Exception as e:
-        print(f"An error occured whilw trying to play audio: {e}")
-
-    return output_filepath 
-
-input_text= "Hi this is AI with Shubham, Autoplay testing"
-#text_to_speech_with_gtts(input_text=input_text,output_filepath="gtts_testing_autoplay.mp3")
-
-
-
-def text_to_speech_with_elevenlabs(input_text, output_filepath):
-    client = ElevenLabs(api_key=os.environ.get("ELEVENLABS_API_KEY"))
-    
-    audio = client.text_to_speech.convert(
-        text=input_text,
-        voice_id="JjpPU2Do2isL2c5DkxV2",  # replace with your voice ID if different
-        model_id="eleven_turbo_v2",
-        output_format="mp3_44100_128",
-    )
-    
-    save(audio, output_filepath)
-    os_name=platform.system()
-    try:
-        if os_name=="Darwin": #MacOS
-            subprocess.run(['afplay',output_filepath])
-        elif os_name=="Windows": #Windows
-            pass # will be handled by gradio on (huggingface for deployment)
-            #os.startfile(os.path.abspath(output_filepath)) 
-            
-            #abs_path = os.path.abspath(output_filepath) 
-            #subprocess.run(['powershell','-c',f'(New-Object Media.SoundPlayer "{output_filepath}").PlaySync();'])
-            #subprocess.run(['powershell','-c',f'Start-Process "{output_filepath}" -Wait'])
-        elif os_name=="Linux": #Linux
-            subprocess.run(['aplay',output_filepath]) #Alternative use 'mpg123' or 'ffplay'
-        else:
-            raise OSError("Unsupported Operating System")
-    except Exception as e:
-        print(f"An error occured whilw trying to play audio: {e}")
-    return output_filepath 
-#text_to_speech_with_elevenlabs(input_text,output_filepath="elevenlabs_testing_autoplay.mp3")
+    return output_filepath
